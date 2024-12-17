@@ -58,6 +58,14 @@ class Atom : public Formula {
             return true;
         }
 
+        bool inCNF() {
+            return true;
+        }
+
+        bool inDNF() {
+            return true;
+        }
+        
     private:
         string atomName;
 };
@@ -79,6 +87,15 @@ class Negation : public Formula {
         bool isNegation() {
             return true;
         }
+
+        bool inCNF() {
+            return true;
+        }
+
+        bool inDNF() {
+            return true;
+        }
+
 
     private:
         shared_ptr<Formula> formula;

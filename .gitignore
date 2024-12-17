@@ -3,3 +3,4 @@ tasks.txt
 /build
 /out
 /googletest
+/.vscode
