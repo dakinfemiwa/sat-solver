@@ -35,7 +35,9 @@ class Formula {
             return false;
         }             
 
-        virtual vector<Formula> getLiterals();
+        virtual vector<Formula> getLiterals() {
+            return {};
+        }
 
         virtual ~Formula() = default;
 };

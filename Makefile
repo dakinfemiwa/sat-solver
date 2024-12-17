@@ -1,8 +1,10 @@
-.PHONY: all build run clean
+.PHONY: all build run clean test
 
 OUTPUTDIRECTORY = out
 BUILDDIRECTORY = build
 EXECUTABLEFILE = main
+
+ATOMTEST = atomtests
 
 all: build run
 
@@ -16,6 +18,11 @@ run:
 	@echo "\n===RUNNING==="
 	@./$(OUTPUTDIRECTORY)/$(EXECUTABLEFILE)
 	@echo "\n"
+
+test:
+	@echo "\n=====TEST====="
+	@./$(OUTPUTDIRECTORY)/$(ATOMTEST)
+		
 
 clean:
 	@echo "\n=====CLEAN====="
