@@ -35,7 +35,11 @@ class Formula {
             return false;
         }             
 
-        virtual vector<Formula> getLiterals() {
+        virtual bool equals(Formula f) {
+            return false;
+        }
+
+        virtual vector<shared_ptr<Formula>> getLiterals() {
             return {};
         }
 
@@ -65,7 +69,20 @@ class Atom : public Formula {
         bool inDNF() {
             return true;
         }
-        
+
+        bool equals(shared_ptr<Formula> f) {
+            return false;
+        }
+
+        bool equals(shared_ptr<Atom> n) {
+            return n->getAtomName() == getAtomName();
+        }        
+
+        vector<shared_ptr<Formula>> getLiterals() {            
+            return {make_shared<Atom>(atomName)};
+        }
+
+
     private:
         string atomName;
 };
@@ -92,10 +109,24 @@ class Negation : public Formula {
             return true;
         }
 
+        bool equals(shared_ptr<Formula> f) {
+            return false;
+        }
+
+        bool equals(shared_ptr<Negation> n) {
+            return n->getFormula() == getFormula();
+        }
+
         bool inDNF() {
             return true;
         }
 
+        vector<shared_ptr<Formula>> getLiterals() {
+            if (formula->isAtom()) {
+                return {formula};
+            }
+            return formula->getLiterals();
+        }
 
     private:
         shared_ptr<Formula> formula;
@@ -129,6 +160,20 @@ class And : public Formula {
                 }
             }
             return true;
+        }
+
+        vector<shared_ptr<Formula>> getLiterals() {
+            if (formulas.empty()) {
+                return {};
+            }
+            vector<shared_ptr<Formula>> literals = formulas.front()->getLiterals();
+
+            for (int i = 1; i < formulas.size(); i++) {
+                vector<shared_ptr<Formula>> newLiteralsList = formulas.at(i)->getLiterals();
+                literals.insert(literals.end(), newLiteralsList.begin(), newLiteralsList.end());
+
+            }
+            return literals;
         }
             
     
@@ -165,6 +210,20 @@ class Or : public Formula {
             }
             return true;
         }
+
+        vector<shared_ptr<Formula>> getLiterals() {
+            if (formulas.empty()) {
+                return {};
+            }
+            vector<shared_ptr<Formula>> literals = formulas.front()->getLiterals();
+
+            for (int i = 1; i < formulas.size(); i++) {
+                vector<shared_ptr<Formula>> newLiteralsList = formulas.at(i)->getLiterals();
+                literals.insert(literals.end(), newLiteralsList.begin(), newLiteralsList.end());
+
+            }
+            return literals;
+        }        
             
     
     private:
@@ -186,7 +245,14 @@ class Implication : public Formula {
 
         shared_ptr<Formula> getRightFormula() const {
             return this->rightFormula;
-        }            
+        }
+
+        vector<shared_ptr<Formula>> getLiterals() {
+            vector<shared_ptr<Formula>> literals = leftFormula->getLiterals();
+            vector<shared_ptr<Formula>> literals2 = leftFormula->getLiterals();
+            literals.insert(literals.end(), literals2.begin(), literals2.end());
+            return literals;
+        }
     
     private:
         shared_ptr<Formula> leftFormula;
