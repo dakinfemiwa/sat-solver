@@ -5,7 +5,7 @@
 
 using namespace std;
 
-enum Value { NOVALUE, TRUE, FALSE };
+//enum Value { NOVALUE, TRUE, FALSE };
 
 class Formula {
     public:
@@ -35,8 +35,13 @@ class Formula {
             return false;
         }             
 
-        virtual bool equals(Formula f) {
+        virtual bool equals(shared_ptr<Formula> f) {
             return false;
+        }
+
+        virtual shared_ptr<Formula> negationOf() {
+            //Will consider changing
+            return NULL;
         }
 
         virtual vector<shared_ptr<Formula>> getLiterals() {
@@ -73,6 +78,7 @@ class Atom : public Formula {
         bool equals(shared_ptr<Formula> f) {
             return false;
         }
+
 
         bool equals(shared_ptr<Atom> n) {
             return n->getAtomName() == getAtomName();
