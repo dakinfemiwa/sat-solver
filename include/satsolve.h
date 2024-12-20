@@ -46,7 +46,7 @@ struct satSolveStatus {
     formula_state state;
 };
 
-//Functoins
+//Functions
 shared_ptr<struct satSolveStatus> satSolveInit(vector<shared_ptr<Formula>> conjuncts);
 
 
