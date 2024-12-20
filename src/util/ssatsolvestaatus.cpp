@@ -44,6 +44,50 @@ shared_ptr<struct satSolveStatus> satSolveInit(vector<shared_ptr<Formula>> conju
     return satSolveStatus;
 }
 
+void chooseLiteral(shared_ptr<Formula> literal, bool value, 
+shared_ptr<struct satSolveStatus> status) {
+    //
+    if (status->valuations.find(literal) != status->valuations.end()) {
+        //
+        if (status->valuations[literal] != value) {
+            status->state = UNSAT;
+            return;
+        }
+    }
+    
+    vector<shared_ptr<struct conjunctStatus>> conjuncts = status->conjuncts;
+    for (shared_ptr<conjunctStatus> c : conjuncts) {
+        //Assuming c is a disjunction of literals or a literal 
+        //  They are identical if their lists are identical
+        if (c->conjunct->getLiterals() == literal->getLiterals()) {
+            c->level++;
+            c->satisfiedClause.satisfyingLiteral = literal;
+            c->satisfiedClause.satisfied = true;
+        } 
+        //Deal with negation of literal, we should not be looking at negations of literals
+        else if (c->conjunct->isNegation() && c->conjunct->negationOf() == literal) {
+            c->conjunctCount--;
+            if (c->conjunctCount == 0) {
+                status->state = UNSAT;
+                return;
+            }
+        }
+    }
+    //
+    status->clausesLeft--;
+    status->valuations.insert({literal, true});
+    if (status->clausesLeft == 0) {
+        status->state = SAT;
+    }
+
+    
+    
+}
+
+void chooseNegation() {
+
+}
+
 //Function to choose a literal
 
 
