@@ -90,3 +90,7 @@ shared_ptr<struct satSolveStatus> status) {
 
 
 
+void backtrackLiteral(shared_ptr<Formula> literal, 
+shared_ptr<struct satSolveStatus> status)  {
+    
+}
