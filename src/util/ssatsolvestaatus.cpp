@@ -65,7 +65,11 @@ shared_ptr<struct satSolveStatus> status) {
             c->satisfiedClause.satisfied = true;
         } 
         //Deal with negation of literal, we should not be looking at negations of literals
-        else if (c->conjunct->isNegation() && c->conjunct->negationOf() == literal) {
+        else if (c->conjunct->negationOf() == literal) {
+            //Most important part is how many literals are left
+            // SIDE NOTE: Could be useful looking at the case
+            //   where there is 1 literal left - simplifies 
+            //   process as we know we have to use a specific valuation
             c->conjunctCount--;
             if (c->conjunctCount == 0) {
                 status->state = UNSAT;
@@ -84,10 +88,5 @@ shared_ptr<struct satSolveStatus> status) {
     
 }
 
-void chooseNegation() {
-
-}
-
-//Function to choose a literal
 
 
