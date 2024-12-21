@@ -2,5 +2,5 @@
 tasks.txt
 /build
 /out
-/googletest
 /.vscode
+/pythonProject
