@@ -59,11 +59,16 @@ shared_ptr<struct satSolveStatus> status) {
     for (shared_ptr<conjunctStatus> c : conjuncts) {
         //Assuming c is a disjunction of literals or a literal 
         //  They are identical if their lists are identical
-        if (c->conjunct->getLiterals() == literal->getLiterals()) {
+        vector<shared_ptr<Formula>> conjcs = c->conjunct->getLiterals();
+        if ((c->conjunct->getLiterals() == literal->getLiterals() &&
+        !c->satisfiedClause.satisfied) || 
+        (find(conjcs.begin(), conjcs.end(), literal) != conjcs.end()))  {
             c->level++;
             c->satisfiedClause.satisfyingLiteral = literal;
             c->satisfiedClause.satisfied = true;
-        } 
+            //If a clause is satisfied we have less clauses to satisfy
+            status->clausesLeft--;
+        }
         //Deal with negation of literal, we should not be looking at negations of literals
         else if (c->conjunct->negationOf() == literal) {
             //Most important part is how many literals are left
@@ -78,19 +83,34 @@ shared_ptr<struct satSolveStatus> status) {
         }
     }
     //
-    status->clausesLeft--;
+    
     status->valuations.insert({literal, true});
     if (status->clausesLeft == 0) {
         status->state = SAT;
     }
 
-    
-    
 }
 
 
 
 void backtrackLiteral(shared_ptr<Formula> literal, 
 shared_ptr<struct satSolveStatus> status)  {
+    if (status->state == UNSAT) {
+        status->state = UNKNOWN;
+    }
+    status->wrongValuations.insert({literal, true});
+    status->valuations.erase(literal);
+
+    vector<shared_ptr<struct conjunctStatus>> conjuncts = status->conjuncts;
+    for (shared_ptr<conjunctStatus> c : conjuncts) {
+        if (c->conjunct->getLiterals() == literal->getLiterals()) {
+            c->level--;
+            c->satisfiedClause.satisfyingLiteral = NULL;
+            
+        } else if (c->conjunct->negationOf() == literal) {
+            c->conjunctCount++;
+        }
+    }    
+
     
 }
