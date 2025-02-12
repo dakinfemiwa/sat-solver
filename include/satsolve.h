@@ -28,7 +28,7 @@ struct conjunctStatus {
     //Data to identify at what stage a conjunct was satisfied
     //  so if there needs to be backtracking that can be done
     int level;
-    //
+    //Checks how many clauses are left in formula
     int conjunctCount;
 };
 

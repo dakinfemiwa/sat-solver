@@ -23,6 +23,7 @@ vector<shared_ptr<Formula>> prev_conjuncts) {
 
 //Initialise satisfiedClauses
 
+
 //Initialise information concerning SAT solver
 shared_ptr<struct satSolveStatus> satSolveInit(vector<shared_ptr<Formula>> conjuncts) {
     shared_ptr<struct satSolveStatus> satSolveStatus = make_shared<struct satSolveStatus>();
@@ -35,6 +36,8 @@ shared_ptr<struct satSolveStatus> satSolveInit(vector<shared_ptr<Formula>> conju
     for (shared_ptr<Formula> f : conjuncts) {
         shared_ptr<struct satisfiedClause> satisfiedClause;
         shared_ptr<struct conjunctStatus> conjunctStat = make_shared<struct conjunctStatus>();
+        conjunctStat->conjunct = f;
+        //conjunctStat->conjunctCount
         conjunctStat->satisfiedClause = *satisfiedClause;
         
         satSolveStatus->conjuncts.push_back(conjunctStat);
