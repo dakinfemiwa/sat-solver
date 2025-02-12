@@ -18,4 +18,4 @@ add_subdirectory(googletest)
 
 add_subdirectory(test)
 
-target_link_libraries(atomtests gtest gtest_main pthread)
+target_link_libraries(formulatests gtest gtest_main pthread)

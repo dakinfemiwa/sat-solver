@@ -4,7 +4,7 @@ OUTPUTDIRECTORY = out
 BUILDDIRECTORY = build
 EXECUTABLEFILE = main
 
-ATOMTEST = atomtests
+ATOMTEST = formulatests
 NEGATIONTEST = negationtests
 
 all: build run
