@@ -32,6 +32,14 @@ class NegationOfAtomIsALiteral {};
 class NegationOfAndIsNotALiteral {};
 class NegationOfAndIsNotALiteral2 {};
 class NegationOfAndIsNotALiteral3 {};
+class NegationOfOrIsNotALiteral {};
+class NegationOfOrIsNotALiteral2 {};
+class NegationOfOrIsNotALiteral3 {};
+class NegationOfImplicationIsNotALiteral {};
+class NegationOfImplicationIsNotALiteral2 {};
+class NegationOfImplicationIsNotALiteral3 {};
+class NegationOfImplicationIsNotALiteral4 {};
+class NegationOfDoubleImplicationIsNotALiteral {};
 
 
 
@@ -141,10 +149,127 @@ TEST(NegationTest, NegationOfAndIsNotALiteral3) {
     vector<shared_ptr<Formula>> f = {};
     f.push_back(atom1);
     f.push_back(atom2);
-    f.push_back(atom3)
+    f.push_back(atom3);
 
     shared_ptr<Formula> andStatement = make_shared<And>(f);
     
     EXPECT_FALSE(Negation(andStatement).isLiteral());
 }
 
+TEST(NegationTest, NegationOfOrIsNotALiteral) {
+    shared_ptr<Formula> atom1 = make_shared<Atom>("a");
+    shared_ptr<Formula> atom2 = make_shared<Atom>("b");
+    vector<shared_ptr<Formula>> f = {};
+    f.push_back(atom1);
+    f.push_back(atom2);
+
+    shared_ptr<Formula> orStatement = make_shared<Or>(f);
+    
+    EXPECT_FALSE(Negation(orStatement).isLiteral());
+}
+
+TEST(NegationTest, NegationOfOrIsNotALiteral2) {
+    shared_ptr<Formula> atom1 = make_shared<Atom>("");
+    shared_ptr<Formula> atom2 = make_shared<Atom>("b");
+    vector<shared_ptr<Formula>> f = {};
+    f.push_back(atom1);
+    f.push_back(atom2);
+
+    shared_ptr<Formula> orStatement = make_shared<Or>(f);
+    
+    EXPECT_FALSE(Negation(orStatement).isLiteral());
+}
+
+TEST(NegationTest, NegationOfOrIsNotALiteral3) {
+    shared_ptr<Formula> atom1 = make_shared<Atom>("asa");
+    shared_ptr<Formula> atom2 = make_shared<Atom>("b");
+    shared_ptr<Formula> atom3 = make_shared<Atom>("z");
+    vector<shared_ptr<Formula>> f = {};
+    f.push_back(atom1);
+    f.push_back(atom2);
+    f.push_back(atom3);
+
+    shared_ptr<Formula> orStatement = make_shared<Or>(f);
+    
+    EXPECT_FALSE(Negation(orStatement).isLiteral());
+}
+
+
+TEST(NegationTest, NegationOfImplicationIsNotALiteral) {
+    shared_ptr<Formula> atom1 = make_shared<Atom>("asa");
+    shared_ptr<Formula> atom2 = make_shared<Atom>("b");
+
+    shared_ptr<Formula> implication = make_shared<Implication>(atom1, atom2);
+    
+    EXPECT_FALSE(Negation(implication).isLiteral());
+}
+
+TEST(NegationTest, NegationOfImplicationIsNotALiteral2) {
+    shared_ptr<Formula> atom1 = make_shared<Atom>("asa");
+    shared_ptr<Formula> atom2 = make_shared<Atom>("b");
+    shared_ptr<Formula> atom3 = make_shared<Atom>("c");
+
+    
+    vector<shared_ptr<Formula>> f = {};
+    f.push_back(atom1);
+    f.push_back(atom2);
+    f.push_back(atom3);
+
+    shared_ptr<Formula> statement2 = make_shared<And>(f);
+    shared_ptr<Formula> implication = make_shared<Implication>(statement2, atom3);
+    
+    EXPECT_FALSE(Negation(implication).isLiteral());
+}
+
+TEST(NegationTest, NegationOfImplicationIsNotALiteral3) {
+    shared_ptr<Formula> atom1 = make_shared<Atom>("asa");
+    shared_ptr<Formula> atom2 = make_shared<Atom>("b");
+    shared_ptr<Formula> atom3 = make_shared<Atom>("c");
+
+    
+    vector<shared_ptr<Formula>> f = {};
+    f.push_back(atom1);
+    f.push_back(atom2);
+    f.push_back(atom3);
+
+    shared_ptr<Formula> statement2 = make_shared<Or>(f);
+    shared_ptr<Formula> implication = make_shared<Implication>(statement2, atom3);
+    
+    EXPECT_FALSE(Negation(implication).isLiteral());
+}
+
+TEST(NegationTest, NegationOfImplicationIsNotALiteral4) {
+    shared_ptr<Formula> atom1 = make_shared<Atom>("asa");
+    shared_ptr<Formula> atom2 = make_shared<Atom>("b");
+    shared_ptr<Formula> atom3 = make_shared<Atom>("c");
+
+    
+    vector<shared_ptr<Formula>> f = {};
+    f.push_back(atom1);
+    f.push_back(atom2);
+    f.push_back(atom3);
+
+    shared_ptr<Formula> statement2 = make_shared<Or>(f);
+    shared_ptr<Formula> implication = make_shared<Implication>(statement2, atom3);
+    shared_ptr<Formula> implication2 = make_shared<Implication>(implication, statement2);
+    
+    EXPECT_FALSE(Negation(implication).isLiteral());
+}
+
+TEST(NegationTest, NegationOfDoubleImplicationIsNotALiteral) {
+    shared_ptr<Formula> atom1 = make_shared<Atom>("asa");
+    shared_ptr<Formula> atom2 = make_shared<Atom>("b");
+    shared_ptr<Formula> atom3 = make_shared<Atom>("c");
+
+    
+    vector<shared_ptr<Formula>> f = {};
+    f.push_back(atom1);
+    f.push_back(atom2);
+    f.push_back(atom3);
+
+    shared_ptr<Formula> statement2 = make_shared<Or>(f);
+    shared_ptr<Formula> implication = make_shared<Implication>(statement2, atom3);
+    shared_ptr<Formula> doubleImplication = make_shared<DoubleImplication>(implication, statement2);
+    
+    EXPECT_FALSE(Negation(doubleImplication).isLiteral());
+}
