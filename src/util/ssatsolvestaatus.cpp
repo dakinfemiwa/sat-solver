@@ -8,6 +8,7 @@ SatSolveStatus
 */
 
 #include "../../include/satsolve.h"
+#include <cstddef>
 #include <memory>
 #include <vector>
 #include <queue>
@@ -39,6 +40,9 @@ shared_ptr<struct satSolveStatus> satSolveInit(vector<shared_ptr<Formula>> conju
     satSolveStatus->wrongValuations = {};
 
     satSolveStatus->conjuncts = {};
+
+    satSolveStatus->clauseComp = clauseComparator();
+
     for (shared_ptr<Formula> f : conjuncts) {
         //shared_ptr<struct satisfiedClause> satisfiedClause;
         shared_ptr<struct conjunctStatus> conjunctStat = make_shared<struct conjunctStatus>();
@@ -47,16 +51,64 @@ shared_ptr<struct satSolveStatus> satSolveInit(vector<shared_ptr<Formula>> conju
         conjunctStat->satisfiedClause.satisfied = false;
         conjunctStat->satisfiedClause.satisfyingLiteral = NULL;
 
-        conjunctStat->conjunctCount = conjunctStat->conjunctCount = f->getLiterals().size();
+        conjunctStat->conjunctCount = f->getLiterals().size();
         
         satSolveStatus->conjuncts.push_back(conjunctStat);
+        satSolveStatus->conjunctHeap.push_back(conjunctStat);        
+        
         satSolveStatus->clausesLeft++;
     }
+
+    make_heap(satSolveStatus->conjunctHeap.begin(),
+    satSolveStatus->conjunctHeap.end(), 
+    satSolveStatus->clauseComp);    
 
     return satSolveStatus;
 }
 
+void remakeHeap(shared_ptr<struct satSolveStatus> status) {
+    make_heap(status->conjunctHeap.begin(), 
+    status->conjunctHeap.end(), 
+    status->clauseComp);
+}
 
+void updateClause(shared_ptr<struct satSolveStatus> status, 
+    size_t index,
+    shared_ptr<conjunctStatus> c) {
+        if (index >= status->conjunctHeap.size()) {
+            return;
+        }
+
+        size_t current = index;
+        size_t parent = (current - 1) / 2;
+        while (current > 0 && 
+            status->clauseComp(c, status->conjunctHeap[parent])) 
+            {
+            swap(status->conjunctHeap[current], status->conjunctHeap[parent]);
+            current = parent;
+            parent = (current - 1) / 2;
+        }
+
+        size_t heapLength = status->conjunctHeap.size();
+
+        if (current == index) {
+            size_t child = 2 * current + 1;
+            while (child < heapLength) {
+                if (child + 1 < heapLength && 
+                    status->clauseComp(status->conjunctHeap[child + 1], 
+                    status->conjunctHeap[child])) {
+                    child++;
+                }
+                if (!status->clauseComp(c, status->conjunctHeap[child])) {
+                    break;
+                }
+                swap(status->conjunctHeap[current], status->conjunctHeap[child]);
+                current = child;
+                child = 2 * current + 1;
+            
+            }
+        }
+}
 
 void chooseLiteral(shared_ptr<Formula> literal, bool value, 
 shared_ptr<struct satSolveStatus> status) {
@@ -104,6 +156,8 @@ shared_ptr<struct satSolveStatus> status) {
     if (status->clausesLeft == 0) {
         status->state = SAT;
     }
+
+    
 
 }
 

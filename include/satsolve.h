@@ -39,12 +39,21 @@ struct literalStatus {
     bool removed;
 };*/
 
+struct clauseComparator {
+    bool operator()(const shared_ptr<conjunctStatus>& a, const shared_ptr<conjunctStatus>& b) {
+        return a->conjunctCount < b->conjunctCount;
+    }
+};
+
 struct satSolveStatus {
     unordered_map<shared_ptr<Formula>, bool> valuations;
     unordered_map<shared_ptr<Formula>, bool> wrongValuations;
     vector<shared_ptr<struct conjunctStatus>> conjuncts;
+    vector<shared_ptr<struct conjunctStatus>> conjunctHeap;
     int clausesLeft;
     formula_state state;
+
+    clauseComparator clauseComp;
 };
 
 //Functions
