@@ -4,10 +4,11 @@
 #include <memory>
 
 using namespace std;
-
+class Formula;
+class Negation;
 //enum Value { NOVALUE, TRUE, FALSE };
 
-class Formula {
+class Formula : public enable_shared_from_this<Formula> {
     public:
         virtual bool inCNF() {
             return false;
@@ -41,7 +42,7 @@ class Formula {
 
         virtual shared_ptr<Formula> negationOf() {
             //Will consider changing
-            return NULL;
+            return make_shared<Negation>(shared_from_this());
         }
 
         virtual vector<shared_ptr<Formula>> getLiterals() {
@@ -125,6 +126,10 @@ class Negation : public Formula {
 
         bool inDNF() {
             return true;
+        }
+
+        shared_ptr<Formula> negationOf() {
+            return formula;
         }
 
         vector<shared_ptr<Formula>> getLiterals() {
