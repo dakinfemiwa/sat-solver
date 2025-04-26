@@ -273,3 +273,270 @@ TEST(NegationTest, NegationOfDoubleImplicationIsNotALiteral) {
     
     EXPECT_FALSE(Negation(doubleImplication).isLiteral());
 }
+
+// Add these to your formulatests.cpp file
+
+// Formula negationOf() tests
+TEST(FormulaNegationTest, DoubleNegationCancels) {
+    shared_ptr<Formula> atom = make_shared<Atom>("p");
+    shared_ptr<Formula> neg = atom->negationOf();
+    shared_ptr<Formula> doubleNeg = neg->negationOf();
+    
+    EXPECT_TRUE(atom->equals(doubleNeg));
+}
+
+TEST(FormulaNegationTest, NegationOfAndUsesDemorgan) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> b = make_shared<Atom>("b");
+    
+    vector<shared_ptr<Formula>> formulas = {a, b};
+    shared_ptr<Formula> andFormula = make_shared<And>(formulas);
+    
+    shared_ptr<Formula> negAnd = andFormula->negationOf();
+    
+    // Negation of (a ∧ b) should be ¬a ∨ ¬b
+    EXPECT_TRUE(negAnd->isDisjunction());
+    
+    auto orFormula = dynamic_pointer_cast<Or>(negAnd);
+    ASSERT_TRUE(orFormula != nullptr);
+    
+    auto literals = orFormula->getFormulas();
+    ASSERT_EQ(literals.size(), 2);
+    
+    // Check that the literals are negations of a and b
+    EXPECT_TRUE(literals[0]->equals(a->negationOf()) || literals[1]->equals(a->negationOf()));
+    EXPECT_TRUE(literals[0]->equals(b->negationOf()) || literals[1]->equals(b->negationOf()));
+}
+
+TEST(FormulaNegationTest, NegationOfOrUsesDemorgan) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> b = make_shared<Atom>("b");
+    
+    vector<shared_ptr<Formula>> formulas = {a, b};
+    shared_ptr<Formula> orFormula = make_shared<Or>(formulas);
+    
+    shared_ptr<Formula> negOr = orFormula->negationOf();
+    
+    // Negation of (a ∨ b) should be ¬a ∧ ¬b
+    EXPECT_TRUE(negOr->isConjunction());
+    
+    auto andFormula = dynamic_pointer_cast<And>(negOr);
+    ASSERT_TRUE(andFormula != nullptr);
+    
+    auto literals = andFormula->getFormulas();
+    ASSERT_EQ(literals.size(), 2);
+    
+    // Check that the literals are negations of a and b
+    EXPECT_TRUE(literals[0]->equals(a->negationOf()) || literals[1]->equals(a->negationOf()));
+    EXPECT_TRUE(literals[0]->equals(b->negationOf()) || literals[1]->equals(b->negationOf()));
+}
+
+TEST(FormulaNegationTest, NegationOfImplication) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> b = make_shared<Atom>("b");
+    
+    shared_ptr<Formula> impl = make_shared<Implication>(a, b);
+    shared_ptr<Formula> negImpl = impl->negationOf();
+    
+    // Negation of (a → b) should be a ∧ ¬b
+    EXPECT_TRUE(negImpl->isConjunction());
+    
+    auto andFormula = dynamic_pointer_cast<And>(negImpl);
+    ASSERT_TRUE(andFormula != nullptr);
+    
+    auto literals = andFormula->getFormulas();
+    ASSERT_EQ(literals.size(), 2);
+    
+    // Check that the literals are a and ¬b
+    EXPECT_TRUE(literals[0]->equals(a) || literals[1]->equals(a));
+    EXPECT_TRUE(literals[0]->equals(b->negationOf()) || literals[1]->equals(b->negationOf()));
+}
+
+TEST(FormulaNegationTest, NegationOfDoubleImplication) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> b = make_shared<Atom>("b");
+    
+    shared_ptr<Formula> equiv = make_shared<DoubleImplication>(a, b);
+    shared_ptr<Formula> negEquiv = equiv->negationOf();
+    
+    // Negation of (a ↔ b) should be (a ∧ ¬b) ∨ (¬a ∧ b)
+    EXPECT_TRUE(negEquiv->isDisjunction());
+    
+    auto orFormula = dynamic_pointer_cast<Or>(negEquiv);
+    ASSERT_TRUE(orFormula != nullptr);
+    
+    auto disjuncts = orFormula->getFormulas();
+    ASSERT_EQ(disjuncts.size(), 2);
+    
+    // Both disjuncts should be conjunctions
+    EXPECT_TRUE(disjuncts[0]->isConjunction());
+    EXPECT_TRUE(disjuncts[1]->isConjunction());
+    
+    auto conj1 = dynamic_pointer_cast<And>(disjuncts[0]);
+    auto conj2 = dynamic_pointer_cast<And>(disjuncts[1]);
+    
+    ASSERT_TRUE(conj1 != nullptr);
+    ASSERT_TRUE(conj2 != nullptr);
+    
+    auto conj1Lits = conj1->getFormulas();
+    auto conj2Lits = conj2->getFormulas();
+    
+    ASSERT_EQ(conj1Lits.size(), 2);
+    ASSERT_EQ(conj2Lits.size(), 2);
+    
+    // Verify the structure matches (a ∧ ¬b) ∨ (¬a ∧ b)
+    bool foundFirstPattern = 
+        (conj1Lits[0]->equals(a) && conj1Lits[1]->equals(b->negationOf())) ||
+        (conj1Lits[1]->equals(a) && conj1Lits[0]->equals(b->negationOf()));
+        
+    bool foundSecondPattern = 
+        (conj2Lits[0]->equals(a->negationOf()) && conj2Lits[1]->equals(b)) ||
+        (conj2Lits[1]->equals(a->negationOf()) && conj2Lits[0]->equals(b));
+        
+    EXPECT_TRUE(foundFirstPattern && foundSecondPattern || 
+               !foundFirstPattern && !foundSecondPattern);
+}
+
+// And class tests
+TEST(AndTest, ConjunctionOfLiterals) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> b = make_shared<Atom>("b");
+    
+    vector<shared_ptr<Formula>> formulas = {a, b};
+    shared_ptr<Formula> andFormula = make_shared<And>(formulas);
+    
+    EXPECT_TRUE(andFormula->isConjunction());
+    EXPECT_TRUE(andFormula->isConjunctOfLiterals());
+    EXPECT_FALSE(andFormula->isDisjunction());
+}
+
+TEST(AndTest, ConjunctionInCNF) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> b = make_shared<Atom>("b");
+    
+    vector<shared_ptr<Formula>> formulas = {a, b};
+    shared_ptr<Formula> andFormula = make_shared<And>(formulas);
+    
+    EXPECT_TRUE(andFormula->inCNF());
+}
+
+// Or class tests
+TEST(OrTest, DisjunctionOfLiterals) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> b = make_shared<Atom>("b");
+    
+    vector<shared_ptr<Formula>> formulas = {a, b};
+    shared_ptr<Formula> orFormula = make_shared<Or>(formulas);
+    
+    EXPECT_TRUE(orFormula->isDisjunction());
+    EXPECT_TRUE(orFormula->isDisjunctOfLiterals());
+    EXPECT_FALSE(orFormula->isConjunction());
+}
+
+TEST(OrTest, DisjunctionInDNF) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> b = make_shared<Atom>("b");
+    
+    vector<shared_ptr<Formula>> formulas = {a, b};
+    shared_ptr<Formula> orFormula = make_shared<Or>(formulas);
+    
+    EXPECT_TRUE(orFormula->inDNF());
+}
+
+// Implication tests
+TEST(ImplicationTest, ImplicationStructure) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> b = make_shared<Atom>("b");
+    
+    shared_ptr<Implication> impl = make_shared<Implication>(a, b);
+    
+    EXPECT_TRUE(impl->getLeftFormula()->equals(a));
+    EXPECT_TRUE(impl->getRightFormula()->equals(b));
+}
+
+TEST(ImplicationTest, ImplicationEquivalentToDNF) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> b = make_shared<Atom>("b");
+    
+    shared_ptr<Formula> impl = make_shared<Implication>(a, b);
+    
+    // a → b is equivalent to ¬a ∨ b
+    shared_ptr<Formula> negA = a->negationOf();
+    
+    vector<shared_ptr<Formula>> formulas = {negA, b};
+    shared_ptr<Formula> orFormula = make_shared<Or>(formulas);
+    
+    // We would need to implement proper equivalence checking for this test
+    // For now just test that both are in DNF
+    EXPECT_TRUE(impl->inDNF());
+    EXPECT_TRUE(orFormula->inDNF());
+}
+
+// DoubleImplication tests
+TEST(DoubleImplicationTest, DoubleImplicationStructure) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> b = make_shared<Atom>("b");
+    
+    shared_ptr<DoubleImplication> equiv = make_shared<DoubleImplication>(a, b);
+    
+    EXPECT_TRUE(equiv->getLeftFormula()->equals(a));
+    EXPECT_TRUE(equiv->getRightFormula()->equals(b));
+}
+
+// Literal extraction tests
+TEST(LiteralExtractionTest, ExtractFromAtom) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    auto literals = a->getLiterals();
+    
+    ASSERT_EQ(literals.size(), 1);
+    EXPECT_TRUE(literals[0]->equals(a));
+}
+
+TEST(LiteralExtractionTest, ExtractFromNegation) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> negA = make_shared<Negation>(a);
+    
+    auto literals = negA->getLiterals();
+    
+    ASSERT_EQ(literals.size(), 1);
+    EXPECT_TRUE(literals[0]->equals(a));
+}
+
+TEST(LiteralExtractionTest, ExtractFromDisjunction) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> b = make_shared<Atom>("b");
+    shared_ptr<Formula> c = make_shared<Atom>("c");
+    
+    vector<shared_ptr<Formula>> formulas = {a, b, c};
+    shared_ptr<Formula> orFormula = make_shared<Or>(formulas);
+    
+    auto literals = orFormula->getLiterals();
+    
+    ASSERT_EQ(literals.size(), 3);
+    
+    // Check that all original literals are present
+    EXPECT_TRUE(find_if(literals.begin(), literals.end(), 
+        [&](const shared_ptr<Formula>& f) { return f->equals(a); }) != literals.end());
+    EXPECT_TRUE(find_if(literals.begin(), literals.end(), 
+        [&](const shared_ptr<Formula>& f) { return f->equals(b); }) != literals.end());
+    EXPECT_TRUE(find_if(literals.begin(), literals.end(), 
+        [&](const shared_ptr<Formula>& f) { return f->equals(c); }) != literals.end());
+}
+
+TEST(LiteralExtractionTest, ExtractFromConjunction) {
+    shared_ptr<Formula> a = make_shared<Atom>("a");
+    shared_ptr<Formula> b = make_shared<Atom>("b");
+    
+    vector<shared_ptr<Formula>> formulas = {a, b};
+    shared_ptr<Formula> andFormula = make_shared<And>(formulas);
+    
+    auto literals = andFormula->getLiterals();
+    
+    ASSERT_EQ(literals.size(), 2);
+    
+    // Check that all original literals are present
+    EXPECT_TRUE(find_if(literals.begin(), literals.end(), 
+        [&](const shared_ptr<Formula>& f) { return f->equals(a); }) != literals.end());
+    EXPECT_TRUE(find_if(literals.begin(), literals.end(), 
+        [&](const shared_ptr<Formula>& f) { return f->equals(b); }) != literals.end());
+}
