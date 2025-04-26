@@ -11,16 +11,19 @@ SatSolveStatus
 #include <memory>
 #include <vector>
 
-bool satSolveInit(shared_ptr<struct status> status, 
-vector<shared_ptr<Formula>> conjuncts, vector<shared_ptr<Formula>> disjuncts,
-vector<shared_ptr<Formula>> prev_conjuncts) {
+/*
+bool satSolveInit(
+    shared_ptr<struct status> status, 
+    vector<shared_ptr<Formula>> conjuncts, 
+    vector<shared_ptr<Formula>> disjuncts,
+    vector<shared_ptr<Formula>> prev_conjuncts) 
+{
     status->valuations = {};
     status->wrongValuations = {};
     status->conjuncts = conjuncts;
     status->prevConjuncts = prev_conjuncts;
     return true;
-}
-
+}*/
 //Initialise satisfiedClauses
 
 
@@ -34,11 +37,14 @@ shared_ptr<struct satSolveStatus> satSolveInit(vector<shared_ptr<Formula>> conju
 
     satSolveStatus->conjuncts = {};
     for (shared_ptr<Formula> f : conjuncts) {
-        shared_ptr<struct satisfiedClause> satisfiedClause;
+        //shared_ptr<struct satisfiedClause> satisfiedClause;
         shared_ptr<struct conjunctStatus> conjunctStat = make_shared<struct conjunctStatus>();
         conjunctStat->conjunct = f;
         //conjunctStat->conjunctCount
-        conjunctStat->satisfiedClause = *satisfiedClause;
+        conjunctStat->satisfiedClause.satisfied = false;
+        conjunctStat->satisfiedClause.satisfyingLiteral = NULL;
+
+        conjunctStat->conjunctCount = conjunctStat->conjunctCount = f->getLiterals().size();
         
         satSolveStatus->conjuncts.push_back(conjunctStat);
         satSolveStatus->clausesLeft++;
@@ -49,9 +55,11 @@ shared_ptr<struct satSolveStatus> satSolveInit(vector<shared_ptr<Formula>> conju
 
 void chooseLiteral(shared_ptr<Formula> literal, bool value, 
 shared_ptr<struct satSolveStatus> status) {
-    //
+    //If we've assigned a value to a literal, we need to check if it is consistent with the current valuations
+    //  If it is not consistent, we need to backtrack and remove the literal from the valuations
     if (status->valuations.find(literal) != status->valuations.end()) {
-        //
+        // If the literal has already been assigned the opposite value, then we know the 
+        //  formula is unsatisfiable
         if (status->valuations[literal] != value) {
             status->state = UNSAT;
             return;
@@ -87,14 +95,12 @@ shared_ptr<struct satSolveStatus> status) {
     }
     //
     
-    status->valuations.insert({literal, true});
+    status->valuations.insert({literal, value});
     if (status->clausesLeft == 0) {
         status->state = SAT;
     }
 
 }
-
-
 
 void backtrackLiteral(shared_ptr<Formula> literal, 
 shared_ptr<struct satSolveStatus> status)  {
