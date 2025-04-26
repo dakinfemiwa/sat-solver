@@ -10,6 +10,9 @@ SatSolveStatus
 #include "../../include/satsolve.h"
 #include <memory>
 #include <vector>
+#include <queue>
+#include <unordered_map>
+#include <algorithm>
 
 /*
 bool satSolveInit(
@@ -53,6 +56,8 @@ shared_ptr<struct satSolveStatus> satSolveInit(vector<shared_ptr<Formula>> conju
     return satSolveStatus;
 }
 
+
+
 void chooseLiteral(shared_ptr<Formula> literal, bool value, 
 shared_ptr<struct satSolveStatus> status) {
     //If we've assigned a value to a literal, we need to check if it is consistent with the current valuations
@@ -83,9 +88,9 @@ shared_ptr<struct satSolveStatus> status) {
         //Deal with negation of literal, we should not be looking at negations of literals
         else if (c->conjunct->negationOf() == literal) {
             //Most important part is how many literals are left
-            // SIDE NOTE: Could be useful looking at the case
+            /* SIDE NOTE: Could be useful looking at the case
             //   where there is 1 literal left - simplifies 
-            //   process as we know we have to use a specific valuation
+            //   process as we know we have to use a specific valuation*/
             c->conjunctCount--;
             if (c->conjunctCount == 0) {
                 status->state = UNSAT;
@@ -107,7 +112,8 @@ shared_ptr<struct satSolveStatus> status)  {
     if (status->state == UNSAT) {
         status->state = UNKNOWN;
     }
-    status->wrongValuations.insert({literal, true});
+    status->wrongValuations.insert({literal, 
+        status->valuations[literal]});
     status->valuations.erase(literal);
 
     vector<shared_ptr<struct conjunctStatus>> conjuncts = status->conjuncts;
@@ -115,6 +121,8 @@ shared_ptr<struct satSolveStatus> status)  {
         if (c->conjunct->getLiterals() == literal->getLiterals()) {
             c->level--;
             c->satisfiedClause.satisfyingLiteral = NULL;
+            c->satisfiedClause.satisfied = false;
+            status->clausesLeft++;
             
         } else if (c->conjunct->negationOf() == literal) {
             c->conjunctCount++;

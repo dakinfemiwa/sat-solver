@@ -11,8 +11,6 @@ heurestics like VSIDs
 
 using namespace std;
 
-
-
 vector<shared_ptr<Formula>> takeLiteralOutOfDisjunct(shared_ptr<Or> disjunction) {
     vector<shared_ptr<Formula>> formulas = disjunction->getLiterals();
     //formulas.erase(remove_if(formulas.begin(), formulas.end(), ), formulas.end())
