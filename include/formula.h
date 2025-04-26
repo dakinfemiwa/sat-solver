@@ -6,6 +6,7 @@
 using namespace std;
 class Formula;
 class Negation;
+class Or;
 //enum Value { NOVALUE, TRUE, FALSE };
 
 class Formula : public enable_shared_from_this<Formula> {
@@ -41,7 +42,6 @@ class Formula : public enable_shared_from_this<Formula> {
         }
 
         virtual shared_ptr<Formula> negationOf() {
-            //Will consider changing
             return make_shared<Negation>(shared_from_this());
         }
 
@@ -146,9 +146,9 @@ class Negation : public Formula {
 
 class And : public Formula {
     public:
-        And(vector<shared_ptr<Formula>>& formulas) : formulas(formulas) {}
+        And(vector<shared_ptr<Formula>> formulas) : formulas(formulas) {}
 
-        bool isConjunction() {
+        bool isConjunction() override {
             return true;
         }
 
@@ -156,7 +156,7 @@ class And : public Formula {
             return this->formulas;
         }
 
-        bool isConjunctOfLiterals() {
+        bool isConjunctOfLiterals() override {
             bool conjunctOfLiterals = true;
             for (shared_ptr<Formula> f : formulas) {
                 conjunctOfLiterals &= f->isLiteral() ;
@@ -173,7 +173,7 @@ class And : public Formula {
             return true;
         }
 
-        vector<shared_ptr<Formula>> getLiterals() {
+        vector<shared_ptr<Formula>> getLiterals() override {
             if (formulas.empty()) {
                 return {};
             }
@@ -186,10 +186,18 @@ class And : public Formula {
             }
             return literals;
         }
+
+        shared_ptr<Formula> negationOf() override {
+            vector<shared_ptr<Formula>> negatedFormulas;
+            for (const auto& f: formulas) {
+                negatedFormulas.push_back(f->negationOf());
+            }
+            return make_shared<Or>(negatedFormulas);
+        }
             
     
     private:
-        vector<shared_ptr<Formula>> &formulas;
+        vector<shared_ptr<Formula>> formulas;
     
 };
 
@@ -197,7 +205,7 @@ class Or : public Formula {
     public:
         Or(vector<shared_ptr<Formula>> formulas) : formulas(formulas) {}
 
-        bool isDisjunction() {
+        bool isDisjunction() override {
             return true;
         }
 
@@ -206,7 +214,7 @@ class Or : public Formula {
         }
 
 
-        bool isDisjunctOfLiterals() {
+        bool isDisjunctOfLiterals() override {
             for (shared_ptr<Formula> f: formulas) {
                 if (!f->isLiteral()) return false;
             }
@@ -222,7 +230,7 @@ class Or : public Formula {
             return true;
         }
 
-        vector<shared_ptr<Formula>> getLiterals() {
+        vector<shared_ptr<Formula>> getLiterals() override {
             if (formulas.empty()) {
                 return {};
             }
@@ -235,7 +243,14 @@ class Or : public Formula {
             }
             return literals;
         }        
-            
+
+        shared_ptr<Formula> negationOf() override {
+            vector<shared_ptr<Formula>> negatedFormulas;
+            for (const auto& f: formulas) {
+                negatedFormulas.push_back(f->negationOf());
+            }
+            return make_shared<And>(negatedFormulas);
+        }        
     
     private:
         vector<shared_ptr<Formula>> formulas;
@@ -258,12 +273,20 @@ class Implication : public Formula {
             return this->rightFormula;
         }
 
-        vector<shared_ptr<Formula>> getLiterals() {
+        vector<shared_ptr<Formula>> getLiterals() override {
             vector<shared_ptr<Formula>> literals = leftFormula->getLiterals();
-            vector<shared_ptr<Formula>> literals2 = leftFormula->getLiterals();
+            vector<shared_ptr<Formula>> literals2 = rightFormula->getLiterals();
             literals.insert(literals.end(), literals2.begin(), literals2.end());
             return literals;
         }
+
+        shared_ptr<Formula> negationOf() override {
+            // ¬(A → B) = A ∧ ¬B
+            vector<shared_ptr<Formula>> conjuncts;
+            conjuncts.push_back(leftFormula);
+            conjuncts.push_back(rightFormula->negationOf());
+            return make_shared<And>(conjuncts);
+        }        
     
     private:
         shared_ptr<Formula> leftFormula;
@@ -288,6 +311,23 @@ class DoubleImplication : public Formula {
             return this->rightFormula;
         }            
     
+        shared_ptr<Formula> negationOf() override {
+            // ¬(A ↔ B) = (A ∧ ¬B) ∨ (¬A ∧ B)
+            vector<shared_ptr<Formula>> leftConjuncts;
+            leftConjuncts.push_back(leftFormula);
+            leftConjuncts.push_back(rightFormula->negationOf());
+            
+            vector<shared_ptr<Formula>> rightConjuncts;
+            rightConjuncts.push_back(leftFormula->negationOf());
+            rightConjuncts.push_back(rightFormula);
+            
+            vector<shared_ptr<Formula>> disjuncts;
+            disjuncts.push_back(make_shared<And>(leftConjuncts));
+            disjuncts.push_back(make_shared<And>(rightConjuncts));
+            
+            return make_shared<Or>(disjuncts);
+        }
+
     private:
         shared_ptr<Formula> leftFormula;
         shared_ptr<Formula> rightFormula;
