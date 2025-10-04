@@ -1,1 +1,9 @@
-add_executable(main main.cpp)
+add_executable(main 
+    main.cpp
+    util/formula.cpp
+    util/ssatsolvestaatus.cpp
+    util/avl_tree.cpp
+    dpll_solver.cpp
+)
+
+target_include_directories(main PRIVATE ../include)

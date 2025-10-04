@@ -1,187 +1,253 @@
 /*
 SatSolveStatus 
 
-- to handle the utility functions associating with the SAT solving algorithm
-- initialise structs and use structs to solve SAT solving problem
-
-
+- DPLL SAT Solver with AVL Tree optimization and stack-based backtracking
+- Implements unit propagation, conflict-driven backtracking, and efficient clause prioritization
 */
 
 #include "../../include/satsolve.h"
-#include <cstddef>
-#include <memory>
-#include <vector>
-#include <queue>
-#include <unordered_map>
 #include <algorithm>
 
-/*
-bool satSolveInit(
-    shared_ptr<struct status> status, 
-    vector<shared_ptr<Formula>> conjuncts, 
-    vector<shared_ptr<Formula>> disjuncts,
-    vector<shared_ptr<Formula>> prev_conjuncts) 
-{
-    status->valuations = {};
-    status->wrongValuations = {};
-    status->conjuncts = conjuncts;
-    status->prevConjuncts = prev_conjuncts;
-    return true;
-}*/
-//Initialise satisfiedClauses
-
-
-//Initialise information concerning SAT solver
+// Initialize SAT solver with AVL tree for clause prioritization
 shared_ptr<struct satSolveStatus> satSolveInit(vector<shared_ptr<Formula>> conjuncts) {
     shared_ptr<struct satSolveStatus> satSolveStatus = make_shared<struct satSolveStatus>();
     satSolveStatus->state = UNKNOWN;
     satSolveStatus->clausesLeft = 0;
-    satSolveStatus->valuations={};
+    satSolveStatus->valuations = {};
     satSolveStatus->wrongValuations = {};
-
     satSolveStatus->conjuncts = {};
-
-    satSolveStatus->clauseComp = clauseComparator();
+    satSolveStatus->currentLevel = 0;
 
     for (shared_ptr<Formula> f : conjuncts) {
-        //shared_ptr<struct satisfiedClause> satisfiedClause;
         shared_ptr<struct conjunctStatus> conjunctStat = make_shared<struct conjunctStatus>();
         conjunctStat->conjunct = f;
-        //conjunctStat->conjunctCount
         conjunctStat->satisfiedClause.satisfied = false;
-        conjunctStat->satisfiedClause.satisfyingLiteral = NULL;
-
+        conjunctStat->satisfiedClause.satisfyingLiteral = nullptr;
         conjunctStat->conjunctCount = f->getLiterals().size();
+        conjunctStat->originalCount = conjunctStat->conjunctCount;
+        conjunctStat->level = -1;
         
         satSolveStatus->conjuncts.push_back(conjunctStat);
-        satSolveStatus->conjunctHeap.push_back(conjunctStat);        
-        
+        satSolveStatus->clauseTree.insert(conjunctStat);
         satSolveStatus->clausesLeft++;
     }
-
-    make_heap(satSolveStatus->conjunctHeap.begin(),
-    satSolveStatus->conjunctHeap.end(), 
-    satSolveStatus->clauseComp);    
 
     return satSolveStatus;
 }
 
-void remakeHeap(shared_ptr<struct satSolveStatus> status) {
-    make_heap(status->conjunctHeap.begin(), 
-    status->conjunctHeap.end(), 
-    status->clauseComp);
-}
-
-void updateClause(shared_ptr<struct satSolveStatus> status, 
-    size_t index,
-    shared_ptr<conjunctStatus> c) {
-        if (index >= status->conjunctHeap.size()) {
-            return;
-        }
-
-        size_t current = index;
-        size_t parent = (current - 1) / 2;
-        while (current > 0 && 
-            status->clauseComp(c, status->conjunctHeap[parent])) 
-            {
-            swap(status->conjunctHeap[current], status->conjunctHeap[parent]);
-            current = parent;
-            parent = (current - 1) / 2;
-        }
-
-        size_t heapLength = status->conjunctHeap.size();
-
-        if (current == index) {
-            size_t child = 2 * current + 1;
-            while (child < heapLength) {
-                if (child + 1 < heapLength && 
-                    status->clauseComp(status->conjunctHeap[child + 1], 
-                    status->conjunctHeap[child])) {
-                    child++;
-                }
-                if (!status->clauseComp(c, status->conjunctHeap[child])) {
+// Unit propagation with conflict detection
+bool unitPropagate(shared_ptr<struct satSolveStatus> status) {
+    bool propagated = false;
+    
+    do {
+        propagated = false;
+        
+        for (auto& clause : status->conjuncts) {
+            if (clause->satisfiedClause.satisfied || clause->conjunctCount != 1) {
+                continue;
+            }
+            
+            // Find the unassigned literal in this unit clause
+            shared_ptr<Formula> unitLiteral = nullptr;
+            for (auto& literal : clause->conjunct->getLiterals()) {
+                if (status->valuations.find(literal) == status->valuations.end() &&
+                    status->valuations.find(literal->negationOf()) == status->valuations.end()) {
+                    unitLiteral = literal;
                     break;
                 }
-                swap(status->conjunctHeap[current], status->conjunctHeap[child]);
-                current = child;
-                child = 2 * current + 1;
+            }
             
+            if (unitLiteral) {
+                chooseLiteral(unitLiteral, true, status);
+                propagated = true;
+                
+                if (status->state == UNSAT) {
+                    return false;
+                }
             }
         }
+    } while (propagated);
+    
+    return true;
 }
 
 void chooseLiteral(shared_ptr<Formula> literal, bool value, 
 shared_ptr<struct satSolveStatus> status) {
-    //If we've assigned a value to a literal, we need to check if it is consistent with the current valuations
-    //  If it is not consistent, we need to backtrack and remove the literal from the valuations
+    // Check for conflicts
     if (status->valuations.find(literal) != status->valuations.end()) {
-        // If the literal has already been assigned the opposite value, then we know the 
-        //  formula is unsatisfiable
         if (status->valuations[literal] != value) {
             status->state = UNSAT;
             return;
         }
+        return; // Already assigned
     }
     
-    vector<shared_ptr<struct conjunctStatus>> conjuncts = status->conjuncts;
-    for (shared_ptr<conjunctStatus> c : conjuncts) {
-        //Assuming c is a disjunction of literals or a literal 
-        //  They are identical if their lists are identical
-        vector<shared_ptr<Formula>> conjcs = c->conjunct->getLiterals();
-        if ((c->conjunct->getLiterals() == literal->getLiterals() &&
-        !c->satisfiedClause.satisfied) || 
-        (find(conjcs.begin(), conjcs.end(), literal) != conjcs.end()))  {
-            c->level++;
+    // Create decision for backtracking
+    Decision decision;
+    decision.literal = literal;
+    decision.value = value;
+    decision.level = status->currentLevel;
+    
+    shared_ptr<Formula> negLiteral = literal->negationOf();
+    
+    // Process all clauses
+    for (auto& c : status->conjuncts) {
+        if (c->satisfiedClause.satisfied) {
+            continue;
+        }
+        
+        vector<shared_ptr<Formula>> literals = c->conjunct->getLiterals();
+        bool modified = false;
+        int originalCount = c->conjunctCount;
+        
+        // Check if literal satisfies clause
+        if (find(literals.begin(), literals.end(), literal) != literals.end()) {
+            c->level = status->currentLevel;
             c->satisfiedClause.satisfyingLiteral = literal;
             c->satisfiedClause.satisfied = true;
-            //If a clause is satisfied we have less clauses to satisfy
             status->clausesLeft--;
+            modified = true;
         }
-        //Deal with negation of literal, we should not be looking at negations of literals
-        else if (c->conjunct->negationOf() == literal) {
-            //Most important part is how many literals are left
-            /* SIDE NOTE: Could be useful looking at the case
-            //   where there is 1 literal left - simplifies 
-            //   process as we know we have to use a specific valuation*/
+        // Check if negation of literal is in clause
+        else if (find(literals.begin(), literals.end(), negLiteral) != literals.end()) {
             c->conjunctCount--;
+            modified = true;
+            
             if (c->conjunctCount == 0) {
                 status->state = UNSAT;
                 return;
             }
         }
+        
+        if (modified) {
+            decision.modifiedClauses.push_back(c);
+            decision.originalCounts.push_back(originalCount);
+            
+            // Update AVL tree
+            status->clauseTree.remove(c);
+            if (!c->satisfiedClause.satisfied) {
+                status->clauseTree.insert(c);
+            }
+        }
     }
-    //
     
-    status->valuations.insert({literal, value});
+    // Push decision onto stack
+    status->decisionStack.push(decision);
+    
+    // Set valuation
+    status->valuations[literal] = value;
+    
+    // Check if satisfied
     if (status->clausesLeft == 0) {
         status->state = SAT;
     }
-
-    
-
 }
 
-void backtrackLiteral(shared_ptr<Formula> literal, 
-shared_ptr<struct satSolveStatus> status)  {
-    if (status->state == UNSAT) {
-        status->state = UNKNOWN;
+bool backtrack(shared_ptr<struct satSolveStatus> status) {
+    if (status->decisionStack.empty()) {
+        return false; // No more decisions to backtrack
     }
-    status->wrongValuations.insert({literal, 
-        status->valuations[literal]});
-    status->valuations.erase(literal);
-
-    vector<shared_ptr<struct conjunctStatus>> conjuncts = status->conjuncts;
-    for (shared_ptr<conjunctStatus> c : conjuncts) {
-        if (c->conjunct->getLiterals() == literal->getLiterals()) {
-            c->level--;
-            c->satisfiedClause.satisfyingLiteral = NULL;
-            c->satisfiedClause.satisfied = false;
-            status->clausesLeft++;
-            
-        } else if (c->conjunct->negationOf() == literal) {
-            c->conjunctCount++;
-        }
-    }    
-
     
+    Decision lastDecision = status->decisionStack.top();
+    status->decisionStack.pop();
+    
+    // Restore clause states
+    for (size_t i = 0; i < lastDecision.modifiedClauses.size(); i++) {
+        auto clause = lastDecision.modifiedClauses[i];
+        int originalCount = lastDecision.originalCounts[i];
+        
+        // Remove from tree
+        status->clauseTree.remove(clause);
+        
+        // Restore original state
+        if (clause->satisfiedClause.satisfied && clause->level == lastDecision.level) {
+            clause->satisfiedClause.satisfied = false;
+            clause->satisfiedClause.satisfyingLiteral = nullptr;
+            clause->level = -1;
+            status->clausesLeft++;
+        }
+        
+        clause->conjunctCount = originalCount;
+        
+        // Re-insert into tree
+        status->clauseTree.insert(clause);
+    }
+    
+    // Remove valuation
+    status->valuations.erase(lastDecision.literal);
+    
+    // Try opposite value
+    if (status->wrongValuations.find(lastDecision.literal) == status->wrongValuations.end()) {
+        status->wrongValuations[lastDecision.literal] = lastDecision.value;
+        chooseLiteral(lastDecision.literal, !lastDecision.value, status);
+        return true;
+    } else {
+        // Both values tried, continue backtracking
+        status->wrongValuations.erase(lastDecision.literal);
+        return backtrack(status);
+    }
+}
+
+shared_ptr<Formula> selectNextLiteral(shared_ptr<struct satSolveStatus> status) {
+    // Get smallest unsatisfied clause
+    shared_ptr<conjunctStatus> smallestClause = status->clauseTree.getSmallestUnsatisfied();
+    
+    if (!smallestClause) {
+        return nullptr;
+    }
+    
+    // Find unassigned literal in this clause
+    for (auto& literal : smallestClause->conjunct->getLiterals()) {
+        if (status->valuations.find(literal) == status->valuations.end() &&
+            status->valuations.find(literal->negationOf()) == status->valuations.end() &&
+            status->wrongValuations.find(literal) == status->wrongValuations.end()) {
+            return literal;
+        }
+    }
+    
+    return nullptr;
+}
+
+bool dpllSolve(shared_ptr<struct satSolveStatus> status) {
+    while (status->state == UNKNOWN) {
+        // Unit propagation
+        if (!unitPropagate(status)) {
+            // Conflict during unit propagation
+            if (!backtrack(status)) {
+                status->state = UNSAT;
+                return false;
+            }
+            continue;
+        }
+        
+        if (status->state != UNKNOWN) {
+            break;
+        }
+        
+        // Select next literal
+        shared_ptr<Formula> nextLiteral = selectNextLiteral(status);
+        
+        if (!nextLiteral) {
+            status->state = SAT;
+            return true;
+        }
+        
+        // Make decision
+        status->currentLevel++;
+        chooseLiteral(nextLiteral, true, status);
+        
+        // Handle conflicts
+        if (status->state == UNSAT) {
+            if (!backtrack(status)) {
+                return false;
+            }
+        }
+    }
+    
+    return status->state == SAT;
+}
+
+bool solveSAT(vector<shared_ptr<Formula>> conjuncts) {
+    shared_ptr<struct satSolveStatus> status = satSolveInit(conjuncts);
+    return dpllSolve(status);
 }
