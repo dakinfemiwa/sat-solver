@@ -13,5 +13,3 @@ A high-performance Boolean satisfiability (SAT) solver implementing the Davis-Pu
 ### Advanced Data Structures
 - **Custom AVL Tree**: Self-balancing tree for optimal clause selection performance
 - **Minimum Clause Heuristic**: Always branches on clauses with fewest literals
-- **Smart Pointer Management**: Memory-safe implementation with RAII principles
-- **Efficient State Tracking**: Minimal overhead clause satisfaction monitoring
