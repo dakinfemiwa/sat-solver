@@ -2,6 +2,9 @@
 Contains structures used in SAT solving algorithm
 */
 
+#ifndef SATSOLVE_H
+#define SATSOLVE_H
+
 #include <memory>
 #include <vector>
 #include <stack>
@@ -21,59 +24,28 @@ struct satisfiedClause {
 
 struct conjunctStatus {
     shared_ptr<Formula> conjunct;
-    satisfiedClause satisfiedClause;
+    satisfiedClause satisfaction;
     int level;
     int conjunctCount;
     int originalCount; // Store original count for backtracking
 };
 
-// Decision for backtracking
 struct Decision {
     shared_ptr<Formula> literal;
-    bool value;
     int level;
-    vector<shared_ptr<conjunctStatus>> modifiedClauses;
-    vector<int> originalCounts; // Store original counts for backtracking
-};
+    bool value;
+    vector<shared_ptr<conjunctStatus>> clauses;
+    unordered_map<shared_ptr<Formula>, bool> valuations;
+    unordered_map<shared_ptr<Formula>, bool> wrongValuations;
+    int clausesLeft;
+    shared_ptr<conjunctStatus> conflictClause; 
 
-// AVL Tree Node for clause prioritization
-struct AVLNode {
-    shared_ptr<conjunctStatus> clause;
-    int height;
-    shared_ptr<AVLNode> left;
-    shared_ptr<AVLNode> right;
-    
-    AVLNode(shared_ptr<conjunctStatus> c) : clause(c), height(1), left(nullptr), right(nullptr) {}
-};
-
-class AVLTree {
-private:
-    shared_ptr<AVLNode> root;
-    
-    int getHeight(shared_ptr<AVLNode> node);
-    int getBalance(shared_ptr<AVLNode> node);
-    shared_ptr<AVLNode> rotateRight(shared_ptr<AVLNode> y);
-    shared_ptr<AVLNode> rotateLeft(shared_ptr<AVLNode> x);
-    shared_ptr<AVLNode> insert(shared_ptr<AVLNode> node, shared_ptr<conjunctStatus> clause);
-    shared_ptr<AVLNode> remove(shared_ptr<AVLNode> node, shared_ptr<conjunctStatus> clause);
-    shared_ptr<AVLNode> findMin(shared_ptr<AVLNode> node);
-    void collectUnsatisfied(shared_ptr<AVLNode> node, vector<shared_ptr<conjunctStatus>>& result);
-    
-public:
-    AVLTree() : root(nullptr) {}
-    
-    void insert(shared_ptr<conjunctStatus> clause);
-    void remove(shared_ptr<conjunctStatus> clause);
-    shared_ptr<conjunctStatus> getSmallestUnsatisfied();
-    void rebuild(vector<shared_ptr<conjunctStatus>>& clauses);
-    bool isEmpty();
 };
 
 struct satSolveStatus {
     unordered_map<shared_ptr<Formula>, bool> valuations;
     unordered_map<shared_ptr<Formula>, bool> wrongValuations;
     vector<shared_ptr<conjunctStatus>> conjuncts;
-    AVLTree clauseTree;
     int clausesLeft;
     formula_state state;
     
@@ -82,13 +54,18 @@ struct satSolveStatus {
     int currentLevel;
 };
 
-// Functions
 shared_ptr<struct satSolveStatus> satSolveInit(vector<shared_ptr<Formula>> conjuncts);
-void chooseLiteral(shared_ptr<Formula> literal, bool value, shared_ptr<struct satSolveStatus> status);
-bool backtrack(shared_ptr<struct satSolveStatus> status);
-shared_ptr<Formula> selectNextLiteral(shared_ptr<struct satSolveStatus> status);
-bool unitPropagate(shared_ptr<struct satSolveStatus> status);
-bool dpllSolve(shared_ptr<struct satSolveStatus> status);
-bool solveSAT(vector<shared_ptr<Formula>> conjuncts);
+shared_ptr<struct conjunctStatus> getLiteral(shared_ptr<struct satSolveStatus> status);
+bool hasLiteral(shared_ptr<struct conjunctStatus> conjunct, shared_ptr<Formula> literal);
+void set_valuation(shared_ptr<struct satSolveStatus> status,
+                    shared_ptr<Formula> literal,
+                    bool valuation);
+bool hasContradiction(shared_ptr<struct satSolveStatus> status);
+void addDecision(shared_ptr<struct satSolveStatus> status, 
+                    shared_ptr<Formula> literal,
+                    bool valuation);
+shared_ptr<struct satSolveStatus> handle_contradiction(shared_ptr<struct satSolveStatus> status,
+                                                        shared_ptr<Formula> literal,
+                                                        bool valuation);
 
-
+#endif // SATSOLVE_H

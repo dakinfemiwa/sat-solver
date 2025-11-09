@@ -1,3 +1,6 @@
+#ifndef FORMULA_H
+#define FORMULA_H
+
 #include <string>
 #include <type_traits>
 #include <vector>
@@ -296,3 +299,5 @@ class DoubleImplication : public Formula {
         shared_ptr<Formula> rightFormula;
     
 };
+
+#endif
