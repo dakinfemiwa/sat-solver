@@ -64,3 +64,14 @@ TO NOTE: Initial tests did show a 40% improvement across extra large inputs
 | Medium       | 100       | 300     | 0.233        | 0.464         | 1.99x   | 49.70%      |
 | Large        | 200       | 600     | 0.386        | 0.745         | 1.93x   | 48.22%      |
 | Extra Large  | 500       | 1500    | 1.681        | 1.783         | 1.06x   | 5.72%       |
+
+## Summary
+
+| Metric                          | Value          |
+|---------------------------------|----------------|
+| **Average Improvement (All 6 runs)** | **30.47%**     |
+| **Average Improvement (Runs 1-4, 6)** | **33.94%**     |
+| Minimum Improvement             | 13.02% (outlier) |
+| Maximum Improvement             | 41.56%         |
+| **Consistent Range**            | **30-42%**     |
+| Best Individual Test            | 78.20% (Run 4, Large) |
