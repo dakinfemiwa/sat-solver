@@ -6,10 +6,6 @@ A Boolean satisfiability (SAT) solver implementing the Davis-Putnam-Logemann-Lov
 
 ### Core Algorithm
 - **Complete DPLL Implementation**: Unit propagation and backtracking heuristics
-- **AVL Tree Optimization**: O(log n) clause prioritization using self-balancing binary search tree
 - **Stack-Based Backtracking**: Efficient state restoration with O(1) decision tracking
-- **Unit Propagation Engine**: Automatic inference of forced variable assignments
-
-### Data Structures
-- **Custom AVL Tree**: Self-balancing tree for optimal clause selection performance
+- **Unit Propagation**: Automatic inference of forced variable assignments
 - **Minimum Clause Heuristic**: Always branches on clauses with fewest literals
