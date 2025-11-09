@@ -7,5 +7,4 @@ A Boolean satisfiability (SAT) solver implementing the Davis-Putnam-Logemann-Lov
 ### Core Algorithm
 - **Complete DPLL Implementation**: Unit propagation and backtracking heuristics
 - **Stack-Based Backtracking**: Efficient state restoration with O(1) decision tracking
-- **Unit Propagation**: Automatic inference of forced variable assignments
 - **Minimum Clause Heuristic**: Always branches on clauses with fewest literals
