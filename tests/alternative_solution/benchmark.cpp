@@ -27,23 +27,34 @@ struct BenchmarkResult {
     double percentImprovement;
 };
 
-BenchmarkResult runBenchmark(string testName, int numVars, vector<shared_ptr<Formula>> formula) {
+// Run multiple iterations and return average
+BenchmarkResult runBenchmark(string testName, int numVars, vector<shared_ptr<Formula>> formula, int iterations = 5) {
     BenchmarkResult result;
     result.testName = testName;
-    result.numVariables = numVars;  // Now properly set
+    result.numVariables = numVars;
     result.numClauses = formula.size();
     
-    // Benchmark HASHMAP version
-    auto start = high_resolution_clock::now();
-    dpllSatSolve(formula);  // Your optimized version
-    auto end = high_resolution_clock::now();
-    result.hashmapTime = duration_cast<microseconds>(end - start).count() / 1000.0; // ms
+    double totalHashmapTime = 0.0;
+    double totalBaselineTime = 0.0;
     
-    // Benchmark BASELINE version (linear search)
-    start = high_resolution_clock::now();
-    dpllSatSolve_baseline(formula);  // Baseline version
-    end = high_resolution_clock::now();
-    result.baselineTime = duration_cast<microseconds>(end - start).count() / 1000.0; // ms
+    // Run multiple iterations
+    for (int i = 0; i < iterations; i++) {
+        // Benchmark HASHMAP version
+        auto start = high_resolution_clock::now();
+        dpllSatSolve(formula);
+        auto end = high_resolution_clock::now();
+        totalHashmapTime += duration_cast<microseconds>(end - start).count() / 1000.0;
+        
+        // Benchmark BASELINE version
+        start = high_resolution_clock::now();
+        dpllSatSolve_baseline(formula);
+        end = high_resolution_clock::now();
+        totalBaselineTime += duration_cast<microseconds>(end - start).count() / 1000.0;
+    }
+    
+    // Average the results
+    result.hashmapTime = totalHashmapTime / iterations;
+    result.baselineTime = totalBaselineTime / iterations;
     
     // Calculate speedup
     result.speedup = result.baselineTime / result.hashmapTime;
@@ -56,6 +67,7 @@ void printResults(const vector<BenchmarkResult>& results) {
     cout << "\n========================================\n";
     cout << "  PERFORMANCE BENCHMARK RESULTS\n";
     cout << "  Hashmap vs Linear Search (Baseline)\n";
+    cout << "  (Average of 5 iterations per test)\n";
     cout << "========================================\n\n";
     
     cout << left << setw(20) << "Test Name"
@@ -92,10 +104,10 @@ void printResults(const vector<BenchmarkResult>& results) {
 vector<shared_ptr<Formula>> createTestFormula(int numVariables, int numClauses) {
     vector<shared_ptr<Formula>> clauses;
     
-    // Create variables (atoms)
+    // Create variables
     vector<shared_ptr<Formula>> variables;
     for (int i = 0; i < numVariables; i++) {
-        variables.push_back(make_shared<Atom>("x" + to_string(i)));  // Changed Variable to Atom
+        variables.push_back(make_shared<Atom>("x" + to_string(i)));
     }
     
     // Create 3-SAT style clauses
@@ -107,7 +119,7 @@ vector<shared_ptr<Formula>> createTestFormula(int numVariables, int numClauses) 
             int varIdx = (i * 3 + j) % numVariables;
             shared_ptr<Formula> var = variables[varIdx];
             
-            // Randomly negate based on position
+            // Randomly negate
             if ((i + j) % 2 == 0) {
                 literals.push_back(var->negationOf());
             } else {
@@ -115,7 +127,6 @@ vector<shared_ptr<Formula>> createTestFormula(int numVariables, int numClauses) 
             }
         }
         
-        // Create OR clause
         shared_ptr<Formula> clause = make_shared<Or>(literals);
         clauses.push_back(clause);
     }
@@ -127,37 +138,26 @@ int main() {
     vector<BenchmarkResult> results;
     
     cout << "Running SAT Solver Performance Benchmarks...\n";
-    cout << "Comparing Hashmap-based vs Linear Search implementations\n\n";
+    cout << "Comparing Hashmap-based vs Linear Search implementations\n";
+    cout << "Each test runs 5 iterations and reports the average\n\n";
     
-    // Small test
     cout << "Running small test (50 variables, 100 clauses)...\n";
     auto smallFormula = createTestFormula(50, 100);
     results.push_back(runBenchmark("Small", 50, smallFormula));
     
-    // Medium test
     cout << "Running medium test (100 variables, 300 clauses)...\n";
     auto mediumFormula = createTestFormula(100, 300);
     results.push_back(runBenchmark("Medium", 100, mediumFormula));
     
-    // Large test
     cout << "Running large test (200 variables, 600 clauses)...\n";
     auto largeFormula = createTestFormula(200, 600);
     results.push_back(runBenchmark("Large", 200, largeFormula));
     
-    // Extra large test
     cout << "Running extra large test (500 variables, 1500 clauses)...\n";
     auto xlargeFormula = createTestFormula(500, 1500);
     results.push_back(runBenchmark("Extra Large", 500, xlargeFormula));
     
-    // Print all results
     printResults(results);
-    
-    cout << "\n*** CV CLAIM ***\n";
-    cout << "Achieved " << fixed << setprecision(1) 
-         << (results.back().percentImprovement) 
-         << "% performance improvement using hashmap-based state tracking\n";
-    cout << "in SAT solver implementation (tested on formulas with up to " 
-         << results.back().numClauses << " clauses)\n\n";
     
     return 0;
 }
